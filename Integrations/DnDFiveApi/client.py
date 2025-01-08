@@ -1,4 +1,5 @@
 import requests
+from . import utils
 
 base_url = "https://www.dnd5eapi.co/api"
 headers = {
@@ -6,15 +7,9 @@ headers = {
 }
 
 # default request
-def get_request(endpoint, params = {}, payload = {}):
+def get_request(endpoint):
     url = base_url + endpoint
 
     response = requests.request("GET", url, headers=headers)
 
-    return unwrap(response.json())
-
-def unwrap(data):
-    if not 'results' in data:
-        return {}
-
-    return data['results']
+    return utils.unwrap(response.json())
