@@ -25,6 +25,21 @@ class Character:
             print(f"  {stat}: {score}")
         print("-------------------------\n")
 
+# function to choose from a list with user input
+def choose_option(options, prompt):
+    print(f"\n{prompt}")
+    for i, option in enumerate(options, start=1):
+        print(f"{i}. {option}")
+    while True:
+        try:
+            choice = int(input("Enter the number of your choice: ")) - 1
+            if 0 <= choice < len(options):
+                return options[choice]
+            else:
+                print("Invalid choice. Please try again.")
+        except ValueError:
+            print("Invalid input. Please enter a number.")
+
 # choose race
 def choose_race():
     # get request to DnDFiveApi
@@ -34,15 +49,7 @@ def choose_race():
     # map the 'name' index to an array
     races = [race['name'] for race in race_results]
 
-    print("\nChoose a race:")
-
-    # iterate the races with an index used as input for the user
-    for i, race in enumerate(races, start=1):
-        print(f"{i}. {race}")
-
-    choice = int(input("Enter the number of your choice: ")) - 1
-
-    return races[choice]
+    return choose_option(races, "Choose a race:")
 
 # choose class
 def choose_class():
@@ -52,19 +59,11 @@ def choose_class():
     # map the 'name' index to an array
     character_classes = [character_class['name'] for character_class in character_class_results]
 
-    print("\nChoose a class:")
-
-    # iterate the races with an index used as input for the user
-    for i, char_class in enumerate(character_classes, start=1):
-        print(f"{i}. {char_class}")
-
-    choice = int(input("Enter the number of your choice: ")) - 1
-
-    return character_classes[choice]
+    return choose_option(character_classes, "Choose a class:")
 
 # roll ability scores
 def roll_ability_scores():
-    # can't find an api call to get the stats list so I've hard coded it
+    # can't find an api call to get the stats list, so I've hard coded it
     stats = ["Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma"]
 
     # initiate empty scores dict
