@@ -1,4 +1,3 @@
-import pytest
 from Integrations.DnDFiveApi import client as dndfiveapi
 
 def test_get_races():
