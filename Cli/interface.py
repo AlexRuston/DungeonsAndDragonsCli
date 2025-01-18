@@ -1,7 +1,9 @@
 from Characters import utils as character_utils
 
-# entry point
 def begin_character_creation():
+    """
+    entry point for creating a D&D character.
+    """
     print("Welcome to the D&D Character Builder!\n")
 
     # create the character
@@ -10,11 +12,17 @@ def begin_character_creation():
     # display the created character
     character_utils.display(character)
 
-    # store the new character to a txt file
+    # prompt to save the character
     save = input("Do you want to save this character? (yes/no): ").strip().lower()
 
     if save == "yes":
-        with open(f"{character.name}_character.txt", "w") as file:
-            file.write(str(character.__dict__))
+        filename = f"{character.name}_character.txt"
 
-        print("Character saved!")
+        try:
+            with open(filename, "w") as file:
+                file.write(str(character.__dict__))
+            print(f"Character saved as {filename}!")
+        except Exception as e:
+            print(f"An error occurred while saving the character: {e}")
+    else:
+        print("Character not saved.")
