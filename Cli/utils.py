@@ -1,19 +1,25 @@
-# function to choose from a list with user input
 def choose_option(options, prompt):
-    # print the message prompt
-    print(f"\n{prompt}")
+    """
+    display a prompt and a list of options for the user to choose from.
 
-    # loop the options
+    args:
+        options (list): a list of options to display.
+        prompt (str): a message prompting the user to make a choice.
+
+    returns:
+        any: The selected option from the list.
+    """
+    print(f"\n{prompt}")
     for i, option in enumerate(options, start=1):
         print(f"{i}. {option}")
 
-    # validation against a user picking an invalid choice
     while True:
-        try:
-            choice = int(input("Enter the number of your choice: ")) - 1
+        choice = input("Enter the number of your choice: ")
+
+        if choice.isdigit():
+            choice = int(choice) - 1
+
             if 0 <= choice < len(options):
                 return options[choice]
-            else:
-                print("Invalid choice. Please try again.")
-        except ValueError:
-            print("Invalid input. Please enter a number.")
+
+        print("Invalid choice. Please try again.")
