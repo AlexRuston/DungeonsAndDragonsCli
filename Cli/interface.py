@@ -16,13 +16,4 @@ def begin_character_creation():
     save = input("Do you want to save this character? (yes/no): ").strip().lower()
 
     if save == "yes":
-        filename = f"{character.name}_character.txt"
-
-        try:
-            with open(filename, "w") as file:
-                file.write(str(character.__dict__))
-            print(f"Character saved as {filename}!")
-        except Exception as e:
-            print(f"An error occurred while saving the character: {e}")
-    else:
-        print("Character not saved.")
+        character_utils.save_character(character)

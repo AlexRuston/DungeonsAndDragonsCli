@@ -1,11 +1,18 @@
 import random
+import logging
+import os
 from typing import List, Dict
 from Characters import character as character_class
 from Integrations.DnDFiveApi import client as dndfiveapi
 from Cli.utils import choose_option
 
-# constants for stats
+# constants for stats, file extension, and directory
 STATS = ["Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma"]
+FILE_EXTENSION = "_character.txt"
+CHARACTER_STORAGE_DIR = "Storage/Characters"
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 
 def display(character: character_class.Character) -> None:
     """
@@ -102,3 +109,32 @@ def create_character() -> character_class.Character:
     character.ability_scores = roll_ability_scores()
 
     return character
+
+def get_character_file_path(character: character_class.Character) -> str:
+    """
+    construct the file path for a character in the storage directory.
+    """
+
+    # ensure the storage directory exists
+    os.makedirs(CHARACTER_STORAGE_DIR, exist_ok=True)
+    return os.path.join(CHARACTER_STORAGE_DIR, f"{character.name}{FILE_EXTENSION}")
+
+
+def save_character(character: character_class.Character) -> str:
+    """
+    save the character's details to a text file in the storage directory.
+    """
+    file_path = get_character_file_path(character)
+
+    try:
+        with open(file_path, "w") as file:
+            # save the character's attributes as a string
+            file.write(str(character.__dict__))
+
+        logging.info(f"Character saved as {file_path}!")
+
+        return file_path
+    except Exception as error:
+        logging.error(f"An error occurred while saving the character: {error}")
+
+        raise
