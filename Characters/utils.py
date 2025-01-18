@@ -1,10 +1,19 @@
 import random
+from typing import List, Dict
 from Characters import character as character_class
 from Integrations.DnDFiveApi import client as dndfiveapi
 from Cli.utils import choose_option
 
-# display character traits function
-def display(character):
+# constants for stats
+STATS = ["Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma"]
+
+def display(character: character_class.Character) -> None:
+    """
+    display the summary of a character.
+
+    args:
+        character (Character): The character object to display.
+    """
     print("\n--- Character Summary ---")
     print(f"Name: {character.name}")
     print(f"Race: {character.race}")
@@ -12,62 +21,82 @@ def display(character):
     print(f"Background: {character.background}")
     print(f"Alignment: {character.alignment}")
     print("Ability Scores:")
+
     for stat, score in character.ability_scores.items():
         print(f"  {stat}: {score}")
+
     print("-------------------------\n")
 
-# choose race
-def race_options():
-    # get request to DnDFiveApi
-    # returns list of races
-    race_results = dndfiveapi.get_request('/races')
+def race_options() -> List[str]:
+    """
+    fetch available races from the DnDFiveApi.
 
-    # map the 'name' index to an array
-    races = [race['name'] for race in race_results]
+    returns:
+        List[str]: A list of race names.
+    """
+    try:
+        race_results = dndfiveapi.get_request('/races')
+        return [race['name'] for race in race_results]
+    except Exception as e:
+        print(f"Error fetching race options: {e}")
+        return []
 
-    return races
+def class_options() -> List[str]:
+    """
+    fetch available character classes from the DnDFiveApi.
 
-# choose class
-def class_options():
-    # get request to DnDFiveApi
-    character_class_results = dndfiveapi.get_request('/classes')
+    returns:
+        List[str]: A list of class names.
+    """
+    try:
+        character_class_results = dndfiveapi.get_request('/classes')
+        return [char_class['name'] for char_class in character_class_results]
+    except Exception as e:
+        print(f"Error fetching class options: {e}")
+        return []
 
-    # map the 'name' index to an array
-    character_classes = [character_class['name'] for character_class in character_class_results]
+def roll_ability_scores() -> Dict[str, int]:
+    """
+    roll ability scores for a character using 4d6 drop the lowest method.
 
-    return character_classes
-
-# roll ability scores
-def roll_ability_scores():
-    # can't find an api call to get the stats list, so I've hard coded it
-    stats = ["Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma"]
-
-    # initiate empty scores dict
+    returns:
+        dict[str, int]: a dictionary with stats as keys and rolled scores as values.
+    """
     scores = {}
-
     print("\nRolling ability scores...")
 
-    # loop the stats
-    for stat in stats:
-        rolls = [random.randint(1, 6) for _ in range(4)]
-
-        # drop the lowest roll
-        rolls.remove(min(rolls))
-
-        # sum of remaining rolls given to the stat score
-        scores[stat] = sum(rolls)
-
-        print(f"{stat}: {scores[stat]} (Rolls: {rolls})")
+    for stat in STATS:
+        rolls = sorted(random.randint(1, 6) for _ in range(4))
+        total = sum(rolls[1:])  # Sum the top 3 rolls
+        scores[stat] = total
+        print(f"{stat}: {total} (Rolls: {rolls})")
 
     return scores
 
-def create_character():
-    # create a new character
+def create_character() -> character_class.Character:
+    """
+    create a new character by gathering user inputs and rolling ability scores.
+
+    returns:
+        character: The newly created character object.
+    """
     character = character_class.Character()
 
     character.name = input("Enter your character's name: ")
-    character.race = choose_option(race_options(), 'Choose a Race: ')
-    character.char_class = choose_option(class_options(), 'Choose a Class: ')
+    races = race_options()
+
+    if races:
+        character.race = choose_option(races, 'Choose a Race: ')
+    else:
+        character.race = "Unknown"
+
+    classes = class_options()
+
+    if classes:
+        character.char_class = choose_option(classes, 'Choose a Class: ')
+    else:
+        character.char_class = "Unknown"
+
     character.background = input("\nEnter your character's background: ")
     character.alignment = input("Enter your character's alignment (e.g., Neutral Good): ")
     character.ability_scores = roll_ability_scores()
