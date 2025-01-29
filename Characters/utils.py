@@ -1,10 +1,11 @@
 import random
 import logging
 import os
-from typing import List, Dict
+import json
+from typing import Union, List, Dict
 from Characters import character as character_class
 from Integrations.DnDFiveApi import client as dndfiveapi
-from Cli.utils import choose_option
+from Cli.utils import choose_option, list_character_files
 
 # constants for stats, file extension, and directory
 STATS = ["Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma"]
@@ -14,7 +15,7 @@ CHARACTER_STORAGE_DIR = "Storage/Characters"
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 
-def display(character: character_class.Character) -> None:
+def display(character: Union[character_class.Character, type]) -> None:
     """
     display the summary of a character.
 
@@ -138,3 +139,31 @@ def save_character(character: character_class.Character) -> str:
         logging.error(f"An error occurred while saving the character: {error}")
 
         raise
+
+def load_character() -> Union[dict[str, str], None]:
+    """
+    loads the contents of the given character file and returns it as a Python object.
+
+    :return: the JSON contents of the file as a Python object, or None if an error occurs.
+    """
+    character_files = list_character_files(CHARACTER_STORAGE_DIR)
+
+    character_file = choose_option(character_files, "Choose a character to load:")
+    path_and_file = CHARACTER_STORAGE_DIR + "/" + character_file
+
+    try:
+        with open(path_and_file, 'r') as file:
+            # parse the JSON contents of the file
+            character_data = json.load(file)
+            return character_data
+    except FileNotFoundError:
+        print(f"Error: File '{character_file}' not found.")
+        return None
+    except json.JSONDecodeError:
+        print(f"Error: File '{character_file}' does not contain valid JSON.")
+        return None
+    except Exception as e:
+        print(f"An error occurred while loading the file: {e}")
+        return None
+
+

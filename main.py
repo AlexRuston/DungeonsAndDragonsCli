@@ -1,4 +1,4 @@
-from Cli.interface import begin_character_creation
+from Cli.interface import load_or_create
 
 if __name__ == "__main__":
-    begin_character_creation()
+    load_or_create()
