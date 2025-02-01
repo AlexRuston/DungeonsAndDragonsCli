@@ -1,6 +1,9 @@
 import random
 import logging
 import json
+import os
+from openai import OpenAI
+from dotenv import load_dotenv
 from pathlib import Path
 from typing import Union, List, Dict
 from Characters import character as character_class
@@ -10,6 +13,15 @@ from Cli.utils import choose_option, list_character_files
 STATS = ["Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma"]
 FILE_EXTENSION = "_character.txt"
 CHARACTER_STORAGE_DIR = Path("Storage/Characters")
+
+# load .env file
+load_dotenv()
+
+# get env variable
+open_api_key = os.getenv("OPEN_AI_API_KEY")
+
+# initialize the OpenAI client
+client = OpenAI(api_key=open_api_key)
 
 logging.basicConfig(level=logging.INFO)
 
@@ -56,6 +68,23 @@ def roll_ability_scores() -> Dict[str, int]:
         stat: sum(sorted(random.randint(1, 6) for _ in range(4))[1:]) for stat in STATS
     }
 
+def generate_character_background(character: character_class.Character) -> str:
+    # create a prompt for the AI
+    prompt = f"Create a detailed Dungeons and Dragons character background for a {character.race} {character.char_class} who is {character.alignment}"
+
+    # call the OpenAI API
+    response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "You are a creative assistant who specializes in creating Dungeons & Dragons character backgrounds."},
+            {"role": "user", "content": prompt}
+        ],
+        max_tokens=500,  # length of the response
+        temperature=0.7,  # creativity of the response
+    )
+
+    return response.choices[0].message.content
+
 def create_character() -> character_class.Character:
     """
     create a new character by gathering user inputs and rolling ability scores
@@ -64,8 +93,9 @@ def create_character() -> character_class.Character:
     character.name = input("Enter your character's name: ")
     character.race = choose_option(race_options(), 'Choose a Race: ') or "Unknown"
     character.char_class = choose_option(class_options(), 'Choose a Class: ') or "Unknown"
-    character.background = input("\nEnter your character's background: ")
     character.alignment = input("Enter your character's alignment (e.g., Neutral Good): ")
+    character.background = input("\nEnter your character's background: ")
+    #character.background = generate_character_background(character)
     character.ability_scores = roll_ability_scores()
     return character
 
