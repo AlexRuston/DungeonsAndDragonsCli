@@ -1,26 +1,21 @@
 import random
 import logging
-import os
 import json
+from pathlib import Path
 from typing import Union, List, Dict
 from Characters import character as character_class
 from Integrations.DnDFiveApi import client as dndfiveapi
 from Cli.utils import choose_option, list_character_files
 
-# constants for stats, file extension, and directory
 STATS = ["Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma"]
 FILE_EXTENSION = "_character.txt"
-CHARACTER_STORAGE_DIR = "Storage/Characters"
+CHARACTER_STORAGE_DIR = Path("Storage/Characters")
 
-# Configure logging
 logging.basicConfig(level=logging.INFO)
 
 def display(character: Union[character_class.Character, type]) -> None:
     """
-    display the summary of a character.
-
-    args:
-        character (Character): The character object to display.
+    display the summary of a character
     """
     print("\n--- Character Summary ---")
     print(f"Name: {character.name}")
@@ -29,141 +24,94 @@ def display(character: Union[character_class.Character, type]) -> None:
     print(f"Background: {character.background}")
     print(f"Alignment: {character.alignment}")
     print("Ability Scores:")
-
     for stat, score in character.ability_scores.items():
         print(f"  {stat}: {score}")
-
     print("-------------------------\n")
 
 def race_options() -> List[str]:
     """
-    fetch available races from the DnDFiveApi.
-
-    returns:
-        List[str]: A list of race names.
+    fetch available races from the DnDFiveApi
     """
     try:
-        race_results = dndfiveapi.get_request('/races')
-        return [race['name'] for race in race_results]
+        return [race['name'] for race in dndfiveapi.get_request('/races')]
     except Exception as e:
-        print(f"Error fetching race options: {e}")
+        logging.error(f"Error fetching race options: {e}")
         return []
 
 def class_options() -> List[str]:
     """
-    fetch available character classes from the DnDFiveApi.
-
-    returns:
-        List[str]: A list of class names.
+    fetch available character classes from the DnDFiveApi
     """
     try:
-        character_class_results = dndfiveapi.get_request('/classes')
-        return [char_class['name'] for char_class in character_class_results]
+        return [char_class['name'] for char_class in dndfiveapi.get_request('/classes')]
     except Exception as e:
-        print(f"Error fetching class options: {e}")
+        logging.error(f"Error fetching class options: {e}")
         return []
 
 def roll_ability_scores() -> Dict[str, int]:
     """
-    roll ability scores for a character using 4d6 drop the lowest method.
-
-    returns:
-        dict[str, int]: a dictionary with stats as keys and rolled scores as values.
+    roll ability scores using 4d6 drop-the-lowest method
     """
-    scores = {}
-    print("\nRolling ability scores...")
-
-    for stat in STATS:
-        rolls = sorted(random.randint(1, 6) for _ in range(4))
-        total = sum(rolls[1:])  # Sum the top 3 rolls
-        scores[stat] = total
-        print(f"{stat}: {total} (Rolls: {rolls})")
-
-    return scores
+    return {
+        stat: sum(sorted(random.randint(1, 6) for _ in range(4))[1:]) for stat in STATS
+    }
 
 def create_character() -> character_class.Character:
     """
-    create a new character by gathering user inputs and rolling ability scores.
-
-    returns:
-        character: The newly created character object.
+    create a new character by gathering user inputs and rolling ability scores
     """
     character = character_class.Character()
-
     character.name = input("Enter your character's name: ")
-    races = race_options()
-
-    if races:
-        character.race = choose_option(races, 'Choose a Race: ')
-    else:
-        character.race = "Unknown"
-
-    classes = class_options()
-
-    if classes:
-        character.char_class = choose_option(classes, 'Choose a Class: ')
-    else:
-        character.char_class = "Unknown"
-
+    character.race = choose_option(race_options(), 'Choose a Race: ') or "Unknown"
+    character.char_class = choose_option(class_options(), 'Choose a Class: ') or "Unknown"
     character.background = input("\nEnter your character's background: ")
     character.alignment = input("Enter your character's alignment (e.g., Neutral Good): ")
     character.ability_scores = roll_ability_scores()
-
     return character
 
-def get_character_file_path(character: character_class.Character) -> str:
+def get_character_file_path(character: character_class.Character) -> Path:
     """
-    construct the file path for a character in the storage directory.
+    construct the file path for storing a character
     """
-
-    # ensure the storage directory exists
-    os.makedirs(CHARACTER_STORAGE_DIR, exist_ok=True)
-    return os.path.join(CHARACTER_STORAGE_DIR, f"{character.name}{FILE_EXTENSION}")
-
+    CHARACTER_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+    return CHARACTER_STORAGE_DIR / f"{character.name}{FILE_EXTENSION}"
 
 def save_character(character: character_class.Character) -> str:
     """
-    save the character's details to a text file in the storage directory.
+    save character details to a file
     """
     file_path = get_character_file_path(character)
-
     try:
-        with open(file_path, "w") as file:
-            # save the character's attributes as a string
-            file.write(str(character.__dict__))
-
+        with file_path.open("w") as file:
+            json.dump(character.__dict__, file, indent=4)
         logging.info(f"Character saved as {file_path}!")
-
-        return file_path
+        return str(file_path)
     except Exception as error:
-        logging.error(f"An error occurred while saving the character: {error}")
-
+        logging.error(f"Error saving character: {error}")
         raise
 
-def load_character() -> Union[dict[str, str], None]:
+def load_character() -> Union[Dict[str, str], None]:
     """
-    loads the contents of the given character file and returns it as a Python object.
-
-    :return: the JSON contents of the file as a Python object, or None if an error occurs.
+    load a character from a file
     """
-    character_files = list_character_files(CHARACTER_STORAGE_DIR)
+    character_files = list_character_files(str(CHARACTER_STORAGE_DIR))
+    if not character_files:
+        logging.warning("No characters found to load.")
+        return None
 
     character_file = choose_option(character_files, "Choose a character to load:")
-    path_and_file = CHARACTER_STORAGE_DIR + "/" + character_file
+    if not character_file:
+        return None
+
+    file_path = CHARACTER_STORAGE_DIR / f"{character_file}"
 
     try:
-        with open(path_and_file, 'r') as file:
-            # parse the JSON contents of the file
-            character_data = json.load(file)
-            return character_data
+        with file_path.open("r") as file:
+            return json.load(file)
     except FileNotFoundError:
-        print(f"Error: File '{character_file}' not found.")
-        return None
+        logging.error(f"File '{file_path}' not found.")
     except json.JSONDecodeError:
-        print(f"Error: File '{character_file}' does not contain valid JSON.")
-        return None
+        logging.error(f"Invalid JSON in file '{file_path}'.")
     except Exception as e:
-        print(f"An error occurred while loading the file: {e}")
-        return None
-
-
+        logging.error(f"Error loading file: {e}")
+    return None
