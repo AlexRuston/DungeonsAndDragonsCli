@@ -19,6 +19,8 @@ load_dotenv()
 
 # get env variable
 open_api_key = os.getenv("OPEN_AI_API_KEY")
+if not open_api_key:
+    raise ValueError("OPEN_AI_API_KEY not found in environment variables.")
 
 # initialize the OpenAI client
 client = OpenAI(api_key=open_api_key)
@@ -69,21 +71,24 @@ def roll_ability_scores() -> Dict[str, int]:
     }
 
 def generate_character_background(character: character_class.Character) -> str:
-    # create a prompt for the AI
-    prompt = f"Create a detailed Dungeons and Dragons character background for a {character.race} {character.char_class} who is {character.alignment}"
-
-    # call the OpenAI API
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": "You are a creative assistant who specializes in creating Dungeons & Dragons character backgrounds."},
-            {"role": "user", "content": prompt}
-        ],
-        max_tokens=500,  # length of the response
-        temperature=0.7,  # creativity of the response
-    )
-
-    return response.choices[0].message.content
+    """
+    generate a character background using OpenAI's GPT-3.5-turbo.
+    """
+    prompt = f"Create a detailed Dungeons and Dragons character background for a {character.race} {character.char_class} who is {character.alignment}."
+    try:
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are a creative assistant who specializes in creating Dungeons & Dragons character backgrounds."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=500,
+            temperature=0.7,
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        logging.error(f"Error generating character background: {e}")
+        return "Fail"
 
 def create_character() -> character_class.Character:
     """
@@ -94,8 +99,9 @@ def create_character() -> character_class.Character:
     character.race = choose_option(race_options(), 'Choose a Race: ') or "Unknown"
     character.char_class = choose_option(class_options(), 'Choose a Class: ') or "Unknown"
     character.alignment = input("Enter your character's alignment (e.g., Neutral Good): ")
-    character.background = input("\nEnter your character's background: ")
-    #character.background = generate_character_background(character)
+    character.background = generate_character_background(character)
+    if character.background == "Fail":
+        character.background = input("Auto generation failed.\nEnter your character's background: ")
     character.ability_scores = roll_ability_scores()
     return character
 
